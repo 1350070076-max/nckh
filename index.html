@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGIS - Giám sát LST & NDVI</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+        }
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+        .info-popup {
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Khung chứa bản đồ -->
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 1. Khởi tạo bản đồ, mặc định căn tâm tại tọa độ TP.HCM (lấy từ dữ liệu mẫu của Tiên)
+        var map = L.map('map').setView([10.762622, 106.660172], 13);
+
+        // 2. Thêm lớp nền bản đồ OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // 3. Gọi API FastAPI để lấy dữ liệu GeoJSON
+        fetch('http://127.0.0.1:8000/api/spatial-data')
+            .then(response => response.json())
+            .then(data => {
+                // 4. Đưa dữ liệu GeoJSON lên bản đồ Leaflet
+                L.geoJSON(data, {
+                    onEachFeature: function (feature, layer) {
+                        if (feature.properties) {
+                            var p = feature.properties;
+                            // Tạo bảng thông tin hiển thị khi bấm vào điểm trên bản đồ
+                            var popupContent = `
+                                <div class="info-popup">
+                                    <b>Tên điểm:</b> ${p.name} <br>
+                                    <b>Nhiệt độ LST:</b> ${p.lst_value} °C <br>
+                                    <b>Chỉ số NDVI:</b> ${p.ndvi_value} <br>
+                                    <b>Thời gian đo:</b> ${p.recorded_at}
+                                </div>
+                            `;
+                            layer.bindPopup(popupContent);
+                        }
+                    }
+                }).addTo(map);
+            })
+            .catch(error => console.error('Lỗi khi tải GeoJSON từ API:', error));
+    </script>
+</body>
+</html>
